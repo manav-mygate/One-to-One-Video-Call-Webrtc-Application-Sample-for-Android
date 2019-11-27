@@ -16,6 +16,10 @@ public class ApplicationController extends Application implements Application.Ac
         return context.getSharedPreferences("APP_PREF_", MODE_PRIVATE);
     }
 
+    public static Context getContext() {
+        return context;
+    }
+
     @Override
     public void onCreate()
     {

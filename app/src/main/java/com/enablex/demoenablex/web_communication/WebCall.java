@@ -18,8 +18,21 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import static com.enablex.demoenablex.web_communication.WebConstants.OPPOToken;
+import static com.enablex.demoenablex.web_communication.WebConstants.RedmiGOToken;
+import static com.enablex.demoenablex.web_communication.WebConstants.sendToRedmiGo;
 
 
 public class WebCall extends AsyncTask<Void, Void, String>
@@ -36,6 +49,7 @@ public class WebCall extends AsyncTask<Void, Void, String>
     private Boolean isAuthenticated = false;
     private JSONObject object = null;
     ProgressDialog dialog;
+
 
     public WebCall(Context context, WebResponse callback, JSONObject object,
                    String urlPath, int callCode, Boolean isGetCall,Boolean isAuthenticated)
@@ -87,7 +101,16 @@ public class WebCall extends AsyncTask<Void, Void, String>
         {
             URL url = new URL(WebConstants.kBaseURL + urlPath + getDataForGetCall(paramsMap));
             Log.e("Weburl", String.valueOf(url));
-            httpURLConnection = (HttpURLConnection) url.openConnection();
+            if (url.getProtocol().toLowerCase().equals("https")) {
+                trustAllHosts();
+                HttpsURLConnection https = (HttpsURLConnection) url.openConnection();
+                https.setHostnameVerifier(DO_NOT_VERIFY);
+                httpURLConnection = https;
+            } else {
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+            }
+
+          //  httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setReadTimeout(60000);
             httpURLConnection.setConnectTimeout(60000);
             httpURLConnection.setRequestMethod("GET");
@@ -99,6 +122,7 @@ public class WebCall extends AsyncTask<Void, Void, String>
             }
             httpURLConnection.setRequestProperty("Content-Type", "application/json");
             httpURLConnection.connect();
+
             Log.e("responseCode", String.valueOf(httpURLConnection.getResponseCode()));
             if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN)
             {
@@ -165,19 +189,29 @@ public class WebCall extends AsyncTask<Void, Void, String>
         {
             URL url = new URL(WebConstants.kBaseURL + urlPath);
             Log.e("Weburl", String.valueOf(url));
-            httpURLConnection = (HttpURLConnection) url.openConnection();
+            if (url.getProtocol().toLowerCase().equals("https")) {
+                trustAllHosts();
+                HttpsURLConnection https = (HttpsURLConnection) url.openConnection();
+                https.setHostnameVerifier(DO_NOT_VERIFY);
+                httpURLConnection = https;
+            } else {
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+            }
+           // httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setReadTimeout(60000);
             httpURLConnection.setConnectTimeout(60000);
             httpURLConnection.setRequestMethod("POST");
             httpURLConnection.setDoInput(true);
             httpURLConnection.setDoOutput(true);
-            if (isAuthenticated){
+          /*  if (isAuthenticated){
                 String text = WebConstants.userName+":"+WebConstants.password;
                 byte[] data = text.getBytes("UTF-8");
                 String base64 = Base64.encodeToString(data, Base64.DEFAULT).replace("\n", "");
                 httpURLConnection.setRequestProperty("Authorization", "Basic " + base64);
-            }
+
+            }*/
             httpURLConnection.setRequestProperty("Content-Type", "application/json");
+            httpURLConnection.setRequestProperty("x-auth-token",RedmiGOToken);
             httpURLConnection.connect();
             OutputStream os = httpURLConnection.getOutputStream();
             if(object!=null){
@@ -205,17 +239,17 @@ public class WebCall extends AsyncTask<Void, Void, String>
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 StringBuilder builder = new StringBuilder();
                 String line = bufferedReader.readLine();
-                while (line != null)
+                /*while (line != null)
                 {
                     builder.append(line + "\n");
                     line = bufferedReader.readLine();
-                }
+                }*/
                 is.close();
                 if (httpURLConnection != null)
                 {
                     httpURLConnection.disconnect();
                 }
-                return builder.toString();
+                return line.toString();
             }
             else
             {
@@ -327,6 +361,42 @@ public class WebCall extends AsyncTask<Void, Void, String>
         {
             Log.i("NET", "disconnected" + isConnected);
             return false;
+        }
+    }
+
+    final static HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
+        }
+    };
+
+    /**
+     * Trust every server - dont check for any certificate
+     */
+    private static void trustAllHosts() {
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return new java.security.cert.X509Certificate[] {};
+            }
+
+            public void checkClientTrusted(X509Certificate[] chain,
+                                           String authType) throws CertificateException {
+            }
+
+            public void checkServerTrusted(X509Certificate[] chain,
+                                           String authType) throws CertificateException {
+            }
+        } };
+
+        // Install the all-trusting trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection
+                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

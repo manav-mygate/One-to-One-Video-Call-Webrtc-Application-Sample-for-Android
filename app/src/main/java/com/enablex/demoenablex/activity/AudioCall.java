@@ -10,7 +10,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.widget.FrameLayout;
@@ -21,7 +20,6 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.enablex.demoenablex.R;
-import com.enablex.demoenablex.utilities.OnDragTouchListener;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -32,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import enx_rtc_android.Controller.EnxLogsUtil;
 import enx_rtc_android.Controller.EnxPlayerView;
 import enx_rtc_android.Controller.EnxReconnectObserver;
 import enx_rtc_android.Controller.EnxRoom;
@@ -41,14 +38,13 @@ import enx_rtc_android.Controller.EnxRtc;
 import enx_rtc_android.Controller.EnxStream;
 import enx_rtc_android.Controller.EnxStreamObserver;
 
-
-public class VideoConferenceActivity extends AppCompatActivity
+public class AudioCall extends AppCompatActivity
         implements EnxRoomObserver, EnxStreamObserver, View.OnClickListener, EnxReconnectObserver {
     EnxRtc enxRtc;
     String token;
     String name;
     EnxPlayerView enxPlayerView;
-    FrameLayout moderator;
+   // FrameLayout moderator;
     FrameLayout participant;
     ImageView disconnect;
     ImageView mute, video, camera, volume;
@@ -72,7 +68,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_video_conference);
+        setContentView(R.layout.layout_audio_call);
         getPreviousIntent();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!hasPermissions(this, PERMISSIONS)) {
@@ -87,6 +83,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     public void onRoomConnected(EnxRoom enxRoom, JSONObject jsonObject) {
         //received when user connected with Enablex room
         enxRooms = enxRoom;
+        enxRoom.changeToAudioOnly(true);
         if(getSupportActionBar()!=null) {
             getSupportActionBar().setTitle(enxRooms.getClientName());
         }
@@ -100,7 +97,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     @Override
     public void onRoomError(JSONObject jsonObject) {
         //received when any error occurred while connecting to the Enablex room
-        Toast.makeText(VideoConferenceActivity.this, jsonObject.optString("msg"), Toast.LENGTH_SHORT).show();
+        Toast.makeText(AudioCall.this, jsonObject.optString("msg"), Toast.LENGTH_SHORT).show();
         finish();
     }
 
@@ -117,20 +114,17 @@ public class VideoConferenceActivity extends AppCompatActivity
 
     @Override
     public void onPublishedStream(EnxStream enxStream) {
-        Log.d("onPublishedStreamh","onPublishedStream called");
-    //received when audio video published successfully to the other remote users
+        //received when audio video published successfully to the other remote users
     }
 
     @Override
     public void onUnPublishedStream(EnxStream enxStream) {
-    //received when audio video unpublished successfully to the other remote users
-        Log.d("onUnPublishedStreamh","onUnPublishedStream called");
-
+        //received when audio video unpublished successfully to the other remote users
     }
 
     @Override
     public void onStreamAdded(EnxStream enxStream) {
-    //received when a new stream added
+        //received when a new stream added
         if (enxStream != null) {
             enxRooms.subscribe(enxStream);
         }
@@ -138,13 +132,12 @@ public class VideoConferenceActivity extends AppCompatActivity
 
     @Override
     public void onSubscribedStream(EnxStream enxStream) {
-        Log.d("onSubscribedStream","onSubscribedStreamCalled");
-     //received when a remote stream subscribed successfully
+        //received when a remote stream subscribed successfully
     }
 
     @Override
     public void onUnSubscribedStream(EnxStream enxStream) {
-    //received when a remote stream unsubscribed successfully
+        //received when a remote stream unsubscribed successfully
     }
 
     @Override
@@ -168,7 +161,7 @@ public class VideoConferenceActivity extends AppCompatActivity
                 String streamID = jsonStreamid.getString("streamId");
                 EnxStream stream = map.get(streamID);
                 if (enxPlayerViewRemote == null) {
-                    enxPlayerViewRemote = new EnxPlayerView(VideoConferenceActivity.this, EnxPlayerView.ScalingType.SCALE_ASPECT_BALANCED, false);
+                    enxPlayerViewRemote = new EnxPlayerView(AudioCall.this, EnxPlayerView.ScalingType.SCALE_ASPECT_BALANCED, false);
                     stream.attachRenderer(enxPlayerViewRemote);
                     participant.addView(enxPlayerViewRemote);
                 }
@@ -181,7 +174,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     @Override
     public void onEventError(JSONObject jsonObject) {
         //received when any error occurred for any room event
-        Toast.makeText(VideoConferenceActivity.this, jsonObject.optString("msg"), Toast.LENGTH_SHORT).show();
+        Toast.makeText(AudioCall.this, jsonObject.optString("msg"), Toast.LENGTH_SHORT).show();
     }
 
 
@@ -268,22 +261,22 @@ public class VideoConferenceActivity extends AppCompatActivity
 
     @Override
     public void onRemoteStreamAudioMute(JSONObject jsonObject) {
-    //received when any remote stream mute audio
+        //received when any remote stream mute audio
     }
 
     @Override
     public void onRemoteStreamAudioUnMute(JSONObject jsonObject) {
-    //received when any remote stream unmute audio
+        //received when any remote stream unmute audio
     }
 
     @Override
     public void onRemoteStreamVideoMute(JSONObject jsonObject) {
-    //received when any remote stream mute video
+        //received when any remote stream mute video
     }
 
     @Override
     public void onRemoteStreamVideoUnMute(JSONObject jsonObject) {
-    //received when any remote stream unmute audio
+        //received when any remote stream unmute audio
     }
 
     @Override
@@ -299,7 +292,6 @@ public class VideoConferenceActivity extends AppCompatActivity
                         localStream.muteSelfAudio(false);
                     }
                 }
-
                 break;
             case R.id.video:
                 if (localStream != null) {
@@ -395,12 +387,12 @@ public class VideoConferenceActivity extends AppCompatActivity
         setUI();
         setClickListener();
         gson = new Gson();
-        getSupportActionBar().setTitle("MyGate");
+        getSupportActionBar().setTitle("QuickApp");
         enxRtc = new EnxRtc(this, this, this);
         localStream = enxRtc.joinRoom(token, getLocalStreamJsonObject(), getReconnectInfo(), null);
         enxPlayerView = new EnxPlayerView(this, EnxPlayerView.ScalingType.SCALE_ASPECT_FILL, true);
         localStream.attachRenderer(enxPlayerView);
-        moderator.addView(enxPlayerView);
+      //  moderator.addView(enxPlayerView);
         progressDialog = new ProgressDialog(this);
     }
 
@@ -410,11 +402,11 @@ public class VideoConferenceActivity extends AppCompatActivity
         video.setOnClickListener(this);
         camera.setOnClickListener(this);
         volume.setOnClickListener(this);
-        moderator.setOnTouchListener(new OnDragTouchListener(moderator));
+    //    moderator.setOnTouchListener(new OnDragTouchListener(moderator));
     }
 
     private void setUI() {
-        moderator = (FrameLayout) findViewById(R.id.moderator);
+       // moderator = (FrameLayout) findViewById(R.id.moderator);
         participant = (FrameLayout) findViewById(R.id.participant);
         disconnect = (ImageView) findViewById(R.id.disconnect);
         mute = (ImageView) findViewById(R.id.mute);
@@ -428,8 +420,8 @@ public class VideoConferenceActivity extends AppCompatActivity
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("audio", true);
-            jsonObject.put("video", true);
-            jsonObject.put("data", true);
+            jsonObject.put("video", false);
+            jsonObject.put("data", false);
             jsonObject.put("maxVideoBW", 400); //2048
             jsonObject.put("minVideoBW", 300);
             JSONObject videoSize = new JSONObject();
@@ -438,8 +430,6 @@ public class VideoConferenceActivity extends AppCompatActivity
             videoSize.put("maxWidth", 1280);
             videoSize.put("maxHeight", 720);
             jsonObject.put("videoSize", videoSize);
-            jsonObject.put("audioMuted", false);
-            jsonObject.put("videoMuted", false);
             jsonObject.put("name", name);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -478,7 +468,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     }
 
     private void showRadioButtonDialog() {
-        final Dialog dialog = new Dialog(VideoConferenceActivity.this);
+        final Dialog dialog = new Dialog(AudioCall.this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.radiogroup);
         List<String> stringList = new ArrayList<>();  // here is list
@@ -491,7 +481,7 @@ public class VideoConferenceActivity extends AppCompatActivity
         String selectedDevice = enxRooms.getSelectedDevice();
         if (selectedDevice != null) {
             for (int i = 0; i < stringList.size(); i++) {
-                RadioButton rb = new RadioButton(VideoConferenceActivity.this); // dynamically creating RadioButton and adding to RadioGroup.
+                RadioButton rb = new RadioButton(AudioCall.this); // dynamically creating RadioButton and adding to RadioGroup.
                 rb.setText(stringList.get(i));
                 rg.addView(rb);
                 if (selectedDevice.equalsIgnoreCase(stringList.get(i))) {
@@ -536,7 +526,7 @@ public class VideoConferenceActivity extends AppCompatActivity
 
     @Override
     public void onReconnect(String message) {
-     // received when room tries to reconnect due to low bandwidth or any connection interruption
+        // received when room tries to reconnect due to low bandwidth or any connection interruption
         try {
             if (message.equalsIgnoreCase("Reconnecting")) {
                 progressDialog.setMessage("Wait, Reconnecting");
@@ -557,5 +547,4 @@ public class VideoConferenceActivity extends AppCompatActivity
         }
         Toast.makeText(this, "Reconnect Success", Toast.LENGTH_SHORT).show();
     }
-
 }

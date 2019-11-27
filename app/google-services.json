@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "103523560024",
+    "firebase_url": "https://enablex-15e38.firebaseio.com",
+    "project_id": "enablex-15e38",
+    "storage_bucket": "enablex-15e38.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:103523560024:android:a205b671743f39e7fb382d",
+        "android_client_info": {
+          "package_name": "com.enablex.demoenablex"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "103523560024-vbvmctn4rvh2l7v3rv5r3652aed4uo8p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDChWwDjGWaClXZoVnt-pY8Y2aQho80Td8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "103523560024-vbvmctn4rvh2l7v3rv5r3652aed4uo8p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
