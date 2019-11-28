@@ -13,6 +13,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RadioButton;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import enx_rtc_android.Controller.EnxLogsObserver;
 import enx_rtc_android.Controller.EnxLogsUtil;
 import enx_rtc_android.Controller.EnxPlayerView;
 import enx_rtc_android.Controller.EnxReconnectObserver;
@@ -43,7 +45,7 @@ import enx_rtc_android.Controller.EnxStreamObserver;
 
 
 public class VideoConferenceActivity extends AppCompatActivity
-        implements EnxRoomObserver, EnxStreamObserver, View.OnClickListener, EnxReconnectObserver {
+        implements EnxRoomObserver, EnxStreamObserver, View.OnClickListener, EnxReconnectObserver, EnxLogsObserver {
     EnxRtc enxRtc;
     String token;
     String name;
@@ -52,6 +54,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     FrameLayout participant;
     ImageView disconnect;
     ImageView mute, video, camera, volume;
+    Button audVid,vid,disconn;
     EnxRoom enxRooms;
     boolean isVideoMuted = false;
     boolean isFrontCamera = true;
@@ -61,6 +64,7 @@ public class VideoConferenceActivity extends AppCompatActivity
     EnxStream localStream;
     EnxPlayerView enxPlayerViewRemote;
     ProgressDialog progressDialog;
+    boolean isFcm;
     int PERMISSION_ALL = 1;
     String[] PERMISSIONS = {
             android.Manifest.permission.CAMERA,
@@ -93,6 +97,7 @@ public class VideoConferenceActivity extends AppCompatActivity
         if (enxRooms != null) {
             enxRooms.publish(localStream);
             enxRooms.setReconnectObserver(this);
+            enxRoom.setLogsObserver(this);
         }
 
     }
@@ -292,13 +297,44 @@ public class VideoConferenceActivity extends AppCompatActivity
             case R.id.disconnect:
                 roomDisconnect();
                 break;
-            case R.id.mute:
+
+            case R.id.disconn:
+                roomDisconnect();
+                break;
+
+            case R.id.aud_vid:
                 if (localStream != null) {
+                   // if (!isVideoMuted) {
+                        localStream.muteSelfVideo(false);
+                        localStream.muteSelfAudio(false);
+
+                   /* } else {
+                        localStream.muteSelfVideo(false);
+                        localStream.muteSelfAudio(false);
+
+                    }*/
+                }
+                break;
+
+            case R.id.vid:
+                if (localStream != null) {
+                   localStream.muteSelfVideo(true);
+                   localStream.muteSelfAudio(false);
+                }
+
+
+            case R.id.mute:
+               /* if (localStream != null) {
                     if (!isAudioMuted) {
                         localStream.muteSelfAudio(true);
                         localStream.muteSelfAudio(false);
                     }
-                }
+                }*/
+                EnxLogsUtil enxLogsUtil = EnxLogsUtil.getInstance();
+
+                enxLogsUtil.enableLogs(true); // To enable logging
+
+                enxRooms.postClientLogs();
 
                 break;
             case R.id.video:
@@ -410,6 +446,9 @@ public class VideoConferenceActivity extends AppCompatActivity
         video.setOnClickListener(this);
         camera.setOnClickListener(this);
         volume.setOnClickListener(this);
+        audVid.setOnClickListener(this);
+        vid.setOnClickListener(this);
+        disconn.setOnClickListener(this);
         moderator.setOnTouchListener(new OnDragTouchListener(moderator));
     }
 
@@ -422,6 +461,13 @@ public class VideoConferenceActivity extends AppCompatActivity
         camera = (ImageView) findViewById(R.id.camera);
         volume = (ImageView) findViewById(R.id.volume);
         rl = (RelativeLayout) findViewById(R.id.rl);
+        audVid=(Button) findViewById(R.id.aud_vid);
+        vid=(Button) findViewById(R.id.vid);
+        disconn=(Button) findViewById(R.id.disconn);
+        if(!isFcm){
+            audVid.setVisibility(View.GONE);
+            vid.setVisibility(View.GONE);
+        }
     }
 
     private JSONObject getLocalStreamJsonObject() {
@@ -438,8 +484,13 @@ public class VideoConferenceActivity extends AppCompatActivity
             videoSize.put("maxWidth", 1280);
             videoSize.put("maxHeight", 720);
             jsonObject.put("videoSize", videoSize);
-            jsonObject.put("audioMuted", false);
-            jsonObject.put("videoMuted", false);
+            if(isFcm) {
+                jsonObject.put("audioMuted", true);
+                jsonObject.put("videoMuted", true);
+            }else{
+                jsonObject.put("audioMuted", false);
+                jsonObject.put("videoMuted", false);
+            }
             jsonObject.put("name", name);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -451,6 +502,8 @@ public class VideoConferenceActivity extends AppCompatActivity
         if (getIntent() != null) {
             token = getIntent().getStringExtra("token");
             name = getIntent().getStringExtra("name");
+            if(getIntent().hasExtra("IsFcm"))
+             isFcm=getIntent().getBooleanExtra("IsFcm",false);
         }
     }
 
@@ -558,4 +611,8 @@ public class VideoConferenceActivity extends AppCompatActivity
         Toast.makeText(this, "Reconnect Success", Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    public void onLogUploaded(JSONObject jsonObject) {
+        Log.d("onLogUploaded", jsonObject.toString());
+    }
 }

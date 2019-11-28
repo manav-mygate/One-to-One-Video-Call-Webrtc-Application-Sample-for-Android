@@ -3,9 +3,45 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="#ffffff"
     android:orientation="vertical"
     tools:context=".activity.ChatActivity">
+
+
+    <android.support.v7.widget.Toolbar
+        android:visibility="gone"
+        android:id="@+id/toolbar"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/colorPrimary"
+        android:orientation="vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_height="40dp"
+                android:layout_width="40dp"
+                android:layout_marginRight="20dp"
+                android:layout_toLeftOf="@+id/audio"
+                android:id="@+id/video"
+                app:srcCompat="@drawable/ic_videocam_black_24dp" />
+
+
+            <ImageView
+                app:srcCompat="@drawable/ic_call_black_24dp"
+                android:id="@+id/audio"
+                android:layout_width="40dp"
+                android:layout_alignParentEnd="true"
+                android:layout_height="40dp" />
+        </RelativeLayout>
+    </android.support.v7.widget.Toolbar>
 
     <LinearLayout
         android:orientation="vertical"

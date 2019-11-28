@@ -1,6 +1,7 @@
 package com.enablex.demoenablex.activity;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -17,6 +18,9 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.enablex.demoenablex.R;
+import com.enablex.demoenablex.web_communication.WebCall;
+import com.enablex.demoenablex.web_communication.WebConstants;
+import com.enablex.demoenablex.web_communication.WebResponse;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -35,7 +39,12 @@ import enx_rtc_android.Controller.EnxRtc;
 import enx_rtc_android.Controller.EnxStream;
 import enx_rtc_android.Controller.EnxStreamObserver;
 
-public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, EnxReconnectObserver, EnxStreamObserver {
+import static com.enablex.demoenablex.web_communication.WebConstants.AUDIO_CALL;
+import static com.enablex.demoenablex.web_communication.WebConstants.SendToOPPO;
+import static com.enablex.demoenablex.web_communication.WebConstants.VIDEO_CALl;
+import static com.enablex.demoenablex.web_communication.WebConstants.sendToRedmiGo;
+
+public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, EnxReconnectObserver, EnxStreamObserver,WebResponse {
 
     private RecyclerView recyclerView;
     private MessagesDetailAdapter mAdapter;
@@ -46,9 +55,12 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     EnxRoom enxRooms;
     EnxRtc enxRtc;
     EnxStream localStream;
+    LinearLayout llChat;
     LinearLayout chatLayout;
+    ImageView video,audio;
     HashMap<Integer, DataToUI> map = new HashMap<>();
     HashMap<Integer, Integer> idMapping = new HashMap<>();
+    int type;
 
     String token;
     String name;
@@ -60,12 +72,16 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_fragment);
         getPreviousIntent();
+      //  getSupportActionBar().hide();
         enxRtc = new EnxRtc(this, this, null);
         localStream = enxRtc.joinRoom(token, getLocalStreamJsonObject(), getReconnectInfo(), null);
 
         recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
         imageView = (ImageView) findViewById(R.id.btn_send);
         editText = (EditText) findViewById(R.id.edit_text);
+        llChat=(LinearLayout) findViewById(R.id.ll_chat);
+        audio=(ImageView) findViewById(R.id.audio);
+        video=(ImageView) findViewById(R.id.video);
 
         recyclerView.setHasFixedSize(true);
 
@@ -75,6 +91,55 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
 
         progressDialog = new ProgressDialog(this);
+
+        audio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                type=AUDIO_CALL;
+                if (localStream != null) {
+                    localStream.detachRenderer();
+                }
+                if (enxRooms != null) {
+                    enxRooms = null;
+                }
+                if (enxRtc != null) {
+                    enxRtc = null;
+                }
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("user_id", SendToOPPO);
+                    jsonObject.put("type",AUDIO_CALL);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                new WebCall(ChatActivity.this, ChatActivity.this, jsonObject, WebConstants.createToken, WebConstants.getToken, false, true).execute();
+
+            }
+        });
+
+        video.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                type=VIDEO_CALl;
+                if (localStream != null) {
+                    localStream.detachRenderer();
+                }
+                if (enxRooms != null) {
+                    enxRooms = null;
+                }
+                if (enxRtc != null) {
+                    enxRtc = null;
+                }
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("user_id", SendToOPPO);
+                    jsonObject.put("type",VIDEO_CALl);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                new WebCall(ChatActivity.this, ChatActivity.this, jsonObject, WebConstants.createToken, WebConstants.getToken, false, true).execute();
+            }
+        });
 
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -264,7 +329,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 JSONObject jsonObject2 = new JSONObject();
                 jsonObject2.put("isSignal", true);
                 jsonObject2.put("id", ids);
-                if (recyclerView != null && !isVisible(recyclerView)) {
+                if (llChat != null && !isVisible(llChat)) {
                     jsonObject2.put("isForeground", false);
                 } else {
                     jsonObject2.put("isForeground", true);
@@ -422,5 +487,47 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         int width = displayMetrics.widthPixels;
         final Rect screen = new Rect(0, 0, width, height);
         return actualPosition.intersect(screen);
+    }
+
+    @Override
+    public void onWebResponse(String response, int callCode) {
+        switch (callCode) {
+
+            case WebConstants.getToken:
+                onGetTokenSuccess(response);
+                break;
+
+
+        }
+    }
+
+    private void onGetTokenSuccess(String response) {
+        Log.e("responseToken", response);
+
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (jsonObject.has("token")) {
+                token = jsonObject.optString("token");
+                Log.e("token", token);
+                Intent intent = null;
+                if (type == VIDEO_CALl) {
+                    intent = new Intent(ChatActivity.this, VideoConferenceActivity.class);
+                }  else if(type==AUDIO_CALL) {
+                    intent = new Intent(ChatActivity.this, AudioCall.class);
+                }
+                intent.putExtra("token", token);
+                intent.putExtra("name", name);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, jsonObject.optString("error"), Toast.LENGTH_SHORT).show();
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onWebResponseError(String error, int callCode) {
+        Log.e("errorDashboard", error);
     }
 }
