@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.enablex.demoenablex.activity.AudioCall;
+import com.enablex.demoenablex.activity.ChatActivitityForFCM;
 import com.enablex.demoenablex.activity.ChatActivity;
 import com.enablex.demoenablex.activity.VideoConferenceActivity;
 import com.enablex.demoenablex.web_communication.WebConstants;
@@ -25,13 +26,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Log.d(TAG, remoteMessage.getNotification().getBody().toString());
 
         Intent intent = null;
-        if (remoteMessage.getNotification().getTitle().equals("2")){
+      /*  if (remoteMessage.getNotification().getTitle().equals("2")){
             intent = new Intent(this, VideoConferenceActivity.class);
         } else if (remoteMessage.getNotification().getTitle().equals("3")) {
             intent = new Intent(this, ChatActivity.class);
         } else if(remoteMessage.getNotification().getTitle().equals("1")) {
             intent = new Intent(this, AudioCall.class);
-        }
+        } else{*/
+            intent = new Intent(this, ChatActivity.class);
+
+     //   }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             JSONObject jsonObject = new JSONObject(remoteMessage.getNotification().getBody());

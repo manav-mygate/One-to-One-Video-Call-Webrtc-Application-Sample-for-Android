@@ -253,6 +253,9 @@ public class DashboardActivity extends AppCompatActivity implements View.OnClick
 
                 } else if(type==AUDIO_CALL) {
                     intent = new Intent(DashboardActivity.this, AudioCall.class);
+                } else{
+                    intent = new Intent(DashboardActivity.this, ChatActivity.class);
+
                 }
                 intent.putExtra("token", token);
                 intent.putExtra("name", name.getText().toString());

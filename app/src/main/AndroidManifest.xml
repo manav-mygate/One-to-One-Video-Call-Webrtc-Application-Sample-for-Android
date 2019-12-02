@@ -47,6 +47,9 @@
         <activity android:name=".activity.AudioCall"
             android:screenOrientation="portrait"/>
 
+        <activity android:name=".activity.ChatActivitityForFCM"
+            android:screenOrientation="portrait"/>
+
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="false">

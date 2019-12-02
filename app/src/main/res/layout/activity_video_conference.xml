@@ -40,6 +40,7 @@
 
     <LinearLayout
         android:id="@+id/outer"
+        android:layout_alignParentBottom="true"
         android:layout_above="@+id/ll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -57,7 +58,7 @@
             android:layout_weight="1"
             android:background="@drawable/mybutton"
             android:padding="15dp"
-            android:text="Audio Video"
+            android:text="Aud/vid"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="12sp"/>
@@ -94,6 +95,7 @@
 
 
     <LinearLayout
+        android:visibility="gone"
         android:id="@+id/ll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

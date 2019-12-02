@@ -11,6 +11,7 @@
         android:layout_height="match_parent">
 
         <RelativeLayout
+            android:layout_centerInParent="true"
             android:id="@+id/logindetailBackground"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -49,6 +50,7 @@
                 android:textSize="20sp"/>
 
             <EditText
+                android:visibility="gone"
                 android:id="@+id/name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -67,6 +69,7 @@
                 android:textSize="14sp"/>
 
             <EditText
+                android:visibility="gone"
                 android:id="@+id/roomId"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -94,6 +97,7 @@
                 android:orientation="horizontal">
 
                 <Button
+                    android:visibility="gone"
                     android:id="@+id/createRoom"
                     android:layout_width="100dp"
                     android:layout_height="45dp"
@@ -128,13 +132,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/mybutton"
                     android:padding="15dp"
-                    android:text="Chat"
+                    android:text="Connect to Room"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="12sp"/>
             </LinearLayout>
 
             <Button
+                android:visibility="gone"
                 android:layout_below="@+id/ll_room"
                 android:id="@+id/audio_call"
                 android:layout_width="100dp"

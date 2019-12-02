@@ -10,7 +10,6 @@
 
 
     <android.support.v7.widget.Toolbar
-        android:visibility="gone"
         android:id="@+id/toolbar"
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
@@ -18,12 +17,21 @@
         android:background="@color/colorPrimary"
         android:orientation="vertical">
 
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:text="MyGate"
+                android:id="@+id/toptext"
+                android:textColor="#ffffff"
+                android:textSize="20sp"
+                android:layout_height="match_parent"/>
 
             <ImageView
                 android:layout_height="40dp"
@@ -42,6 +50,16 @@
                 android:layout_height="40dp" />
         </RelativeLayout>
     </android.support.v7.widget.Toolbar>
+
+    <include layout="@layout/activity_video_conference"
+        android:id="@+id/videoConf"
+        android:visibility="gone"
+        />
+
+    <include layout="@layout/layout_audio_call"
+        android:id="@+id/audioView"
+        android:visibility="gone"
+        />
 
     <LinearLayout
         android:orientation="vertical"
