@@ -11,7 +11,8 @@
         android:id="@+id/participant"
         android:layout_width="match_parent"
         android:background="#000000"
-        android:layout_height="match_parent"/>
+        android:layout_centerInParent="true"
+        android:layout_height="300dp"/>
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -36,6 +37,22 @@
         android:layout_above="@+id/ll"
         android:layout_centerHorizontal="true"
         android:src="@drawable/disconnect"/>
+
+
+    <Button
+        android:visibility="gone"
+        android:layout_above="@+id/outer"
+        android:id="@+id/muteAudio"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/mybutton"
+        android:padding="15dp"
+        android:text="mute"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"/>
 
 
     <LinearLayout
@@ -90,7 +107,6 @@
             android:textColor="#FFFFFF"
             android:textSize="12sp"/>
     </LinearLayout>
-
 
 
 

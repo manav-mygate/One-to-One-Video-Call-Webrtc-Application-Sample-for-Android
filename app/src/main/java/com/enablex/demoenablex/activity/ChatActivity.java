@@ -1,11 +1,11 @@
 package com.enablex.demoenablex.activity;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.os.Handler;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -27,6 +28,7 @@ import com.enablex.demoenablex.R;
 import com.enablex.demoenablex.utilities.OnDragTouchListener;
 import com.enablex.demoenablex.web_communication.WebConstants;
 import com.enablex.demoenablex.web_communication.WebResponse;
+import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,18 +41,22 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import enx_rtc_android.Controller.EnxBandwidthObserver;
+import enx_rtc_android.Controller.EnxLogsUtil;
+import enx_rtc_android.Controller.EnxPlayerStatsObserver;
 import enx_rtc_android.Controller.EnxPlayerView;
 import enx_rtc_android.Controller.EnxReconnectObserver;
 import enx_rtc_android.Controller.EnxRoom;
 import enx_rtc_android.Controller.EnxRoomObserver;
 import enx_rtc_android.Controller.EnxRtc;
+import enx_rtc_android.Controller.EnxStatsObserver;
 import enx_rtc_android.Controller.EnxStream;
 import enx_rtc_android.Controller.EnxStreamObserver;
 
 import static com.enablex.demoenablex.web_communication.WebConstants.AUDIO_CALL;
 import static com.enablex.demoenablex.web_communication.WebConstants.VIDEO_CALl;
 
-public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, EnxReconnectObserver, EnxStreamObserver, WebResponse {
+public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, EnxReconnectObserver, EnxStreamObserver, WebResponse, EnxStatsObserver, EnxPlayerStatsObserver, EnxBandwidthObserver {
 
     private RecyclerView recyclerView;
     private MessagesDetailAdapter mAdapter;
@@ -65,7 +71,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     LinearLayout chatLayout;
     TextView topText;
     ImageView video, audio;
-    Button audVid,vid,disconn;
+    Button audVid, vid, disconn,muteAudio;
     View view;
     View audioView;
     HashMap<Integer, DataToUI> map = new HashMap<>();
@@ -75,7 +81,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     FrameLayout participant;
     EnxPlayerView enxPlayerViewRemote;
     Toolbar toolbar;
+    TextView status;
     int type;
+    boolean isAudioMuted=false;
 
     String token;
     String name;
@@ -99,13 +107,15 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         audio = (ImageView) findViewById(R.id.audio);
         video = (ImageView) findViewById(R.id.video);
         view = (View) findViewById(R.id.videoConf);
-        audVid=(Button) findViewById(R.id.aud_vid);
-        vid=(Button) findViewById(R.id.vid) ;
-        disconn=(Button) findViewById(R.id.disconn);
-        audioView=(View) findViewById(R.id.audioView);
-        toolbar=(Toolbar) findViewById(R.id.toolbar);
-        topText=(TextView) findViewById(R.id.toptext);
-        disc=(ImageView) findViewById(R.id.dis);
+        audVid = (Button) findViewById(R.id.aud_vid);
+        vid = (Button) findViewById(R.id.vid);
+        disconn = (Button) findViewById(R.id.disconn);
+        audioView = (View) findViewById(R.id.audioView);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        topText = (TextView) findViewById(R.id.toptext);
+        disc = (ImageView) findViewById(R.id.dis);
+        status = (TextView) findViewById(R.id.status);
+        muteAudio=(Button) findViewById(R.id.muteAudio);
 
         moderator = (FrameLayout) findViewById(R.id.moderator);
         participant = (FrameLayout) findViewById(R.id.participant);
@@ -127,10 +137,10 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
         progressDialog = new ProgressDialog(this);
 
-        if(isfcm){
+        if (isfcm) {
             audVid.setVisibility(View.VISIBLE);
             vid.setVisibility(View.VISIBLE);
-        }else{
+        } else {
             audVid.setVisibility(View.GONE);
             vid.setVisibility(View.GONE);
         }
@@ -154,17 +164,18 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         audio.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                toolbar.setVisibility(View.GONE);
+                //   toolbar.setVisibility(View.GONE);
                 view.setVisibility(View.GONE);
                 audioView.setVisibility(View.VISIBLE);
+                hideSoftKeyboard();
 
                 JSONObject jsonObject = new JSONObject();
                 try {
                     jsonObject.put("message", "mgc-audio");
+                    enxRooms.sendMessage(jsonObject.toString(), true, null);
                     enxRooms.publish(localStream);
                     localStream.muteSelfAudio(false);
                     localStream.muteSelfVideo(true);
-                    enxRooms.sendUserData(jsonObject, true, null);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -174,34 +185,83 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         disconn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                roomDisconnect();
-                finish();
+                /*roomDisconnect();
+                finish();*/
+                toolbar.setVisibility(View.VISIBLE);
+                audioView.setVisibility(View.GONE);
+                view.setVisibility(View.GONE);
+
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("message", "mgc-endcall");
+                    enxRooms.unpublish();
+                    localStream.muteSelfAudio(true);
+                    localStream.muteSelfVideo(true);
+
+                    enxRooms.sendMessage(jsonObject.toString(), true, null);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+        });
+
+        muteAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (localStream != null) {
+                    if (!isAudioMuted) {
+                        localStream.muteSelfAudio(true);
+                        isAudioMuted=true;
+                        muteAudio.setText("unmute");
+                    } else {
+                        isAudioMuted=false;
+                        muteAudio.setText("mute");
+                        localStream.muteSelfAudio(false);
+                    }
+                }
             }
         });
 
         disc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                roomDisconnect();
-                finish();
+                /*roomDisconnect();
+                finish()*/
+                ;
+                toolbar.setVisibility(View.VISIBLE);
+                audioView.setVisibility(View.GONE);
+                view.setVisibility(View.GONE);
+
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("message", "mgc-endcall");
+                    enxRooms.unpublish();
+                    localStream.muteSelfAudio(true);
+                    localStream.muteSelfVideo(true);
+
+                    enxRooms.sendMessage(jsonObject.toString(), true, null);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
         });
 
         video.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                toolbar.setVisibility(View.GONE);
+                //    toolbar.setVisibility(View.GONE);
                 view.setVisibility(View.VISIBLE);
-                audio.setVisibility(View.GONE);
-
+                audioView.setVisibility(View.GONE);
+                hideSoftKeyboard();
                 JSONObject jsonObject = new JSONObject();
                 try {
                     jsonObject.put("message", "mgc-video");
-                    enxRooms.publish(localStream);
                     localStream.muteSelfAudio(false);
                     localStream.muteSelfVideo(false);
-
-                    enxRooms.sendUserData(jsonObject, true, null);
+                    enxRooms.publish(localStream);
+                    enxRooms.sendMessage(jsonObject.toString(), true, null);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -216,7 +276,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                     DataToUI dataToUI = new DataToUI();
                     dataToUI.setData(editText.getText().toString());
                     dataToUI.setReceivedStatus(false);
-                   // JSONArray jsonArray = enxRooms.getUserList();
+                    // JSONArray jsonArray = enxRooms.getUserList();
                     dataToUI.setReceivedData(false);
                     try {
                         ArrayList<String> arrayList = new ArrayList<>();
@@ -235,7 +295,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                         }
                         int id = createID();
                         jsonObject.put("id", createID());
-                        enxRooms.sendUserData(jsonObject, true, arrayList);
+                        enxRooms.sendMessage(jsonObject.toString(), true, arrayList);
 
                         map.put(id, dataToUI);
                         idMapping.put(id, mAdapter.getItemCount());
@@ -256,37 +316,47 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     @Override
     public void onReconnect(String s) {
         // received when room tries to reconnect due to low bandwidth or any connection interruption
-        try {
+      /*  try {
             if (s.equalsIgnoreCase("Reconnecting")) {
                 progressDialog.setMessage("Wait, Reconnecting");
                 progressDialog.show();
-            } else {
-                Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
-            }
+            } else {*/
+        Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+        status.setText("disconnected");
+         /*   }
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
 
     }
 
     @Override
     public void onUserReconnectSuccess(EnxRoom enxRoom, JSONObject jsonObject) {
         // received when reconnect successfully completed
-        if (progressDialog.isShowing()) {
+        /*if (progressDialog.isShowing()) {
             progressDialog.dismiss();
-        }
+        }*/
         Toast.makeText(this, "Reconnect Success", Toast.LENGTH_SHORT).show();
+        status.setText("connected");
+
     }
 
     @Override
     public void onRoomConnected(EnxRoom enxRoom, JSONObject jsonObject) {
         enxRooms = enxRoom;
+        enxRooms.enableStats(true,this);
+        enxRooms.setBandwidthObserver(this);
+        enxPlayerView.enablePlayerStats(true,this);
+
        /* if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(enxRooms.getClientName());
         }*/
-       topText.setText(enxRoom.getClientName());
+        Toast.makeText(this, "roomConnected", Toast.LENGTH_SHORT).show();
+        EnxLogsUtil enxLogsUtil = EnxLogsUtil.getInstance();
+        enxLogsUtil.enableLogs(false); // To disable logging
+        status.setText("connected");
+        topText.setText(enxRoom.getClientName());
         if (enxRooms != null) {
-           // enxRooms.publish(localStream);
             enxRooms.setReconnectObserver(this);
         }
     }
@@ -353,11 +423,11 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 JSONObject jsonStreamid = jsonArray.getJSONObject(0);
                 String streamID = jsonStreamid.getString("streamId");
                 EnxStream stream = map.get(streamID);
-              //  if (enxPlayerViewRemote == null) {
-                    enxPlayerViewRemote = new EnxPlayerView(ChatActivity.this, EnxPlayerView.ScalingType.SCALE_ASPECT_BALANCED, false);
-                    stream.attachRenderer(enxPlayerViewRemote);
-                    participant.addView(enxPlayerViewRemote);
-          //      }
+                //  if (enxPlayerViewRemote == null) {
+                enxPlayerViewRemote = new EnxPlayerView(ChatActivity.this, EnxPlayerView.ScalingType.SCALE_ASPECT_FILL, false);
+                stream.attachRenderer(enxPlayerViewRemote);
+                participant.addView(enxPlayerViewRemote);
+                //      }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -390,25 +460,107 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 /*
             {"broadcast":true,"sender":"Android 2","senderId":"c7c7d7ea-154c-467e-8ee7-3194ad94d2f9","type":"user_data","message":"{\"message\":\"hjjj\",\"isSignal\":false,\"id\":21161140}","timestamp":1574332901910}
 */
-            Log.d("CHAT Activty",jsonObject.toString());
+            Log.d("CHAT Activty", jsonObject.toString());
             String jsonObject1 = jsonObject.getString("message");
             JSONObject message = new JSONObject(jsonObject1);
-            if(message.has("message") && message.get("message").equals("mgc-video")){
+            if (message.has("message") && message.get("message").equals("mgc-video")) {
+                if (isfcm) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setMessage("Click on Aud/vid button below to share your video and audio or click on audio to share just your audio with the caller")
+                            .setCancelable(false)
+                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+
+                                }
+                            })
+                            .setNegativeButton("Chat Only", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    toolbar.setVisibility(View.VISIBLE);
+                                    audioView.setVisibility(View.GONE);
+                                    view.setVisibility(View.GONE);
+
+                                    JSONObject jsonObject = new JSONObject();
+                                    try {
+                                        jsonObject.put("message", "mgc-endcall");
+                                        enxRooms.unpublish();
+                                        localStream.muteSelfAudio(true);
+                                        localStream.muteSelfVideo(true);
+
+                                        enxRooms.sendMessage(jsonObject.toString(), true, null);
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                }
+                            });
+                    AlertDialog alert = builder.create();
+                    alert.show();
+                }
                 view.setVisibility(View.VISIBLE);
-                toolbar.setVisibility(View.GONE);
+                audioView.setVisibility(View.GONE);
+                hideSoftKeyboard();
+                //   toolbar.setVisibility(View.GONE);
                 enxRooms.publish(localStream);
                 return;
             }
-            if(message.has("message") && message.get("message").equals("mgc-audio")){
+            if (message.has("message") && message.get("message").equals("mgc-audio")) {
+                if (isfcm) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setMessage("Click on Aud/vid button below to share your video and audio or click on audio to share just your audio with the caller")
+                            .setCancelable(false)
+                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+
+                                }
+                            })
+                            .setNegativeButton("Chat Only", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    toolbar.setVisibility(View.VISIBLE);
+                                    audioView.setVisibility(View.GONE);
+                                    view.setVisibility(View.GONE);
+
+                                    JSONObject jsonObject = new JSONObject();
+                                    try {
+                                        jsonObject.put("message", "mgc-endcall");
+                                        enxRooms.unpublish();
+                                        localStream.muteSelfAudio(true);
+                                        localStream.muteSelfVideo(true);
+
+                                        enxRooms.sendMessage(jsonObject.toString(), true, null);
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                }
+                            });
+                    AlertDialog alert = builder.create();
+                    alert.show();
+                }
                 audioView.setVisibility(View.VISIBLE);
-                toolbar.setVisibility(View.GONE);
+                view.setVisibility(View.GONE);
+                //    toolbar.setVisibility(View.GONE);
+                hideSoftKeyboard();
                 enxRooms.publish(localStream);
-                localStream.muteSelfVideo(true);
                 localStream.muteSelfAudio(false);
+                localStream.muteSelfVideo(true);
+
+                return;
+            }
+
+            if (message.has("message") && message.get("message").equals("mgc-endcall")) {
+                audioView.setVisibility(View.GONE);
+                view.setVisibility(View.GONE);
+                toolbar.setVisibility(View.VISIBLE);
+                // enxRooms.publish(localStream);
+                enxRooms.unpublish();
+                localStream.muteSelfVideo(true);
+                localStream.muteSelfAudio(true);
                 return;
             }
             Log.d("ChatActivity", String.valueOf(message.optBoolean("isForeground")));
-            int ids = message.has("id")?message.getInt("id"):0;
+            int ids = message.has("id") ? message.getInt("id") : 0;
             if (message.has("isSignal") && message.getBoolean("isSignal")) {
                 DataToUI dtu = map.get(ids);
                 if (message.optBoolean("isForeground")) {
@@ -441,7 +593,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 }
                 int idw = createID();
                 dataToUI.setId(idw);
-                enxRooms.sendUserData(jsonObject2, true, arrayList);
+                //        enxRooms.sendMessage(jsonObject2.toString(), true, arrayList); //TODO for signalling
                 map.put(idw, dataToUI);
                 //  idMapping.put(idw, mAdapter.getItemCount());
 
@@ -469,8 +621,8 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         if (getIntent() != null) {
             token = getIntent().getStringExtra("token");
             name = getIntent().getStringExtra("name");
-            if(getIntent().hasExtra("IsFcm"))
-               isfcm=getIntent().getBooleanExtra("IsFcm",false);
+            if (getIntent().hasExtra("IsFcm"))
+                isfcm = getIntent().getBooleanExtra("IsFcm", false);
         }
     }
 
@@ -480,13 +632,14 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
             jsonObject.put("audio", true);
             jsonObject.put("video", true);
             jsonObject.put("data", true);
-            jsonObject.put("maxVideoBW", 400); //2048
-            jsonObject.put("minVideoBW", 300);
+            jsonObject.put("maxVideoBW", 600); //2048
+            jsonObject.put("minVideoBW", 40);
             JSONObject videoSize = new JSONObject();
-            videoSize.put("minWidth", 720);
-            videoSize.put("minHeight", 480);
-            videoSize.put("maxWidth", 1280);
-            videoSize.put("maxHeight", 720);
+            videoSize.put("minWidth", 45);
+            videoSize.put("maxVideoLayers",1);
+            videoSize.put("minHeight", 80);
+            videoSize.put("maxWidth", 45);
+            videoSize.put("maxHeight", 80);
             jsonObject.put("videoSize", videoSize);
             jsonObject.put("audioMuted", true);
             jsonObject.put("videoMuted", true);
@@ -501,8 +654,8 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("allow_reconnect", true);
-            jsonObject.put("number_of_attempts", 3);
-            jsonObject.put("timeout_interval", 15);
+            jsonObject.put("number_of_attempts", 5);
+            jsonObject.put("timeout_interval", 5000);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -540,6 +693,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
     @Override
     public void onRemoteStreamAudioMute(JSONObject jsonObject) {
+        Log.d("onRemoteStreamAudioMute", jsonObject.toString());
 
     }
 
@@ -664,8 +818,60 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         }
     }
 
-    void onClick(){
+    void onClick() {
         roomDisconnect();
         finish();
+    }
+
+    public void hideSoftKeyboard() {
+        if (getCurrentFocus() != null) {
+            InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+        }
+    }
+
+    /**
+     * Shows the soft keyboard
+     */
+    public void showSoftKeyboard(View view) {
+        InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        view.requestFocus();
+        inputMethodManager.showSoftInput(view, 0);
+    }
+
+    @Override
+    public void onAcknowledgeStats(JSONObject jsonObject) {
+        Log.d("onAcknowledgeStats",jsonObject.toString());
+    }
+
+    @Override
+    public void onReceivedStats(JSONObject jsonObject) {
+        Log.d("onReceivedStats",jsonObject.toString());
+
+    }
+
+    @Override
+    public void onPlayerStats(JSONObject jsonObject) {
+        Log.d("onPlayerStats",jsonObject.toString());
+    }
+
+    @Override
+    public void onBandWidthUpdated(JSONArray jsonArray) {
+        Toast.makeText(this,jsonArray.toString(),Toast.LENGTH_LONG).show();
+        Log.d("onBandWidthUpdated",jsonArray.toString());
+
+    }
+
+    @Override
+    public void onShareStreamEvent(JSONObject jsonObject) {
+        Log.d("onShareStreamEvent",jsonObject.toString());
+
+
+    }
+
+    @Override
+    public void onCanvasStreamEvent(JSONObject jsonObject) {
+        Log.d("onCanvasStreamEvent",jsonObject.toString());
+
     }
 }
