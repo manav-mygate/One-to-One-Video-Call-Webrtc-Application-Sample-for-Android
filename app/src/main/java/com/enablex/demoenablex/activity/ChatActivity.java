@@ -28,7 +28,6 @@ import com.enablex.demoenablex.R;
 import com.enablex.demoenablex.utilities.OnDragTouchListener;
 import com.enablex.demoenablex.web_communication.WebConstants;
 import com.enablex.demoenablex.web_communication.WebResponse;
-import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,6 +37,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 
@@ -90,6 +90,11 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     boolean isForeGround;
     private boolean isfcm;
     ImageView disc;
+    EnxStream activetalkerStream;
+
+    TextView selfPeerConnectionValue,activeTalkerStatValue,localStatValue;
+    JSONObject playerOptions;
+
 
 
     @Override
@@ -115,7 +120,15 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         topText = (TextView) findViewById(R.id.toptext);
         disc = (ImageView) findViewById(R.id.dis);
         status = (TextView) findViewById(R.id.status);
+        status = (TextView) findViewById(R.id.status);
+        status = (TextView) findViewById(R.id.status);
+        status = (TextView) findViewById(R.id.status);
         muteAudio=(Button) findViewById(R.id.muteAudio);
+
+
+        selfPeerConnectionValue = (TextView) findViewById(R.id.selfPeerConnectionValue);
+        activeTalkerStatValue = (TextView) findViewById(R.id.activeTalkerStatValue);
+        localStatValue = (TextView) findViewById(R.id.localStatValue);
 
         moderator = (FrameLayout) findViewById(R.id.moderator);
         participant = (FrameLayout) findViewById(R.id.participant);
@@ -125,6 +138,8 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         enxRtc = new EnxRtc(this, this, null);
         localStream = enxRtc.joinRoom(token, getLocalStreamJsonObject(), getReconnectInfo(), null);
         enxPlayerView = new EnxPlayerView(this, EnxPlayerView.ScalingType.SCALE_ASPECT_FILL, true);
+        playerOptions = getPlayerOptions(true, "#ff669900", 15, 1,
+                "#00FFFFFF");
         localStream.attachRenderer(enxPlayerView);
         moderator.addView(enxPlayerView);
 
@@ -173,7 +188,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 try {
                     jsonObject.put("message", "mgc-audio");
                     enxRooms.sendMessage(jsonObject.toString(), true, null);
-                    enxRooms.publish(localStream);
+                    if(enxRooms!=null) {
+                        enxRooms.publish(localStream);
+                    }
                     localStream.muteSelfAudio(false);
                     localStream.muteSelfVideo(true);
                 } catch (JSONException e) {
@@ -194,7 +211,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 JSONObject jsonObject = new JSONObject();
                 try {
                     jsonObject.put("message", "mgc-endcall");
-                    enxRooms.unpublish();
+                    if(enxRooms!=null) {
+                        enxRooms.unpublish();
+                    }
                     localStream.muteSelfAudio(true);
                     localStream.muteSelfVideo(true);
 
@@ -237,7 +256,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 JSONObject jsonObject = new JSONObject();
                 try {
                     jsonObject.put("message", "mgc-endcall");
-                    enxRooms.unpublish();
+                    if(enxRooms!=null) {
+                        enxRooms.unpublish();
+                    }
                     localStream.muteSelfAudio(true);
                     localStream.muteSelfVideo(true);
 
@@ -260,7 +281,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                     jsonObject.put("message", "mgc-video");
                     localStream.muteSelfAudio(false);
                     localStream.muteSelfVideo(false);
-                    enxRooms.publish(localStream);
+                    if(enxRooms!=null) {
+                        enxRooms.publish(localStream);
+                    }
                     enxRooms.sendMessage(jsonObject.toString(), true, null);
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -322,7 +345,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 progressDialog.show();
             } else {*/
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
-        status.setText("disconnected");
+        status.setText("Reconnecting");
          /*   }
         } catch (Exception e) {
             e.printStackTrace();
@@ -338,15 +361,18 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
         }*/
         Toast.makeText(this, "Reconnect Success", Toast.LENGTH_SHORT).show();
         status.setText("connected");
+        enxPlayerViewRemote = null;
+        View temp = participant.getChildAt(0);
+        participant.removeView(temp);
 
     }
 
     @Override
     public void onRoomConnected(EnxRoom enxRoom, JSONObject jsonObject) {
         enxRooms = enxRoom;
-        enxRooms.enableStats(true,this);
+//        enxRooms.enableStats(true,this);
         enxRooms.setBandwidthObserver(this);
-        enxPlayerView.enablePlayerStats(true,this);
+//        enxPlayerView.enablePlayerStats(true,this);
 
        /* if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(enxRooms.getClientName());
@@ -363,7 +389,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
     @Override
     public void onRoomError(JSONObject jsonObject) {
-
+        Toast.makeText(this, "room connection failed", Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -379,7 +405,8 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
     @Override
     public void onPublishedStream(EnxStream enxStream) {
-
+        enxRooms.enableStats(true,this);
+        enxPlayerView.enablePlayerStats(true,this);
     }
 
     @Override
@@ -412,6 +439,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     @Override
     public void onActiveTalkerList(JSONObject jsonObject) {
         //received when Active talker update happens
+        Log.d("onActiveTalkerList", jsonObject.toString());
         try {
             Map<String, EnxStream> map = enxRooms.getRemoteStreams();
             JSONArray jsonArray = jsonObject.getJSONArray("activeList");
@@ -422,12 +450,17 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
             } else {
                 JSONObject jsonStreamid = jsonArray.getJSONObject(0);
                 String streamID = jsonStreamid.getString("streamId");
-                EnxStream stream = map.get(streamID);
-                //  if (enxPlayerViewRemote == null) {
-                enxPlayerViewRemote = new EnxPlayerView(ChatActivity.this, EnxPlayerView.ScalingType.SCALE_ASPECT_FILL, false);
-                stream.attachRenderer(enxPlayerViewRemote);
-                participant.addView(enxPlayerViewRemote);
-                //      }
+                activetalkerStream = map.get(streamID);
+
+                if (enxPlayerViewRemote == null) {
+                    enxPlayerViewRemote = new EnxPlayerView(ChatActivity.this, EnxPlayerView.ScalingType.SCALE_ASPECT_FILL, false);
+                    activetalkerStream.attachRenderer(enxPlayerViewRemote);
+                    participant.addView(enxPlayerViewRemote);
+
+
+                    enxPlayerViewRemote.setConfigureOption(playerOptions);
+                }
+                enxPlayerViewRemote.enablePlayerStats(true, this);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -436,7 +469,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
 
     @Override
     public void onEventError(JSONObject jsonObject) {
-
+        Log.d("onEventError", jsonObject.toString());
     }
 
     @Override
@@ -455,7 +488,7 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     }
 
     @Override
-    public void onReceivedChatDataAtRoom(JSONObject jsonObject) {
+    public void onMessageReceived(JSONObject jsonObject) {
         try {
 /*
             {"broadcast":true,"sender":"Android 2","senderId":"c7c7d7ea-154c-467e-8ee7-3194ad94d2f9","type":"user_data","message":"{\"message\":\"hjjj\",\"isSignal\":false,\"id\":21161140}","timestamp":1574332901910}
@@ -483,7 +516,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                                     JSONObject jsonObject = new JSONObject();
                                     try {
                                         jsonObject.put("message", "mgc-endcall");
-                                        enxRooms.unpublish();
+                                        if(enxRooms!= null) {
+                                            enxRooms.unpublish();
+                                        }
                                         localStream.muteSelfAudio(true);
                                         localStream.muteSelfVideo(true);
 
@@ -501,7 +536,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 audioView.setVisibility(View.GONE);
                 hideSoftKeyboard();
                 //   toolbar.setVisibility(View.GONE);
-                enxRooms.publish(localStream);
+                if(enxRooms!=null) {
+                    enxRooms.publish(localStream);
+                }
                 return;
             }
             if (message.has("message") && message.get("message").equals("mgc-audio")) {
@@ -524,7 +561,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                                     JSONObject jsonObject = new JSONObject();
                                     try {
                                         jsonObject.put("message", "mgc-endcall");
-                                        enxRooms.unpublish();
+                                        if(enxRooms!=null) {
+                                            enxRooms.unpublish();
+                                        }
                                         localStream.muteSelfAudio(true);
                                         localStream.muteSelfVideo(true);
 
@@ -542,7 +581,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 view.setVisibility(View.GONE);
                 //    toolbar.setVisibility(View.GONE);
                 hideSoftKeyboard();
-                enxRooms.publish(localStream);
+                if(enxRooms!=null) {
+                    enxRooms.publish(localStream);
+                }
                 localStream.muteSelfAudio(false);
                 localStream.muteSelfVideo(true);
 
@@ -554,7 +595,9 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
                 view.setVisibility(View.GONE);
                 toolbar.setVisibility(View.VISIBLE);
                 // enxRooms.publish(localStream);
-                enxRooms.unpublish();
+                if(enxRooms!=null) {
+                    enxRooms.unpublish();
+                }
                 localStream.muteSelfVideo(true);
                 localStream.muteSelfAudio(true);
                 return;
@@ -608,6 +651,11 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     }
 
     @Override
+    public void onUserDataReceived(JSONObject jsonObject) {
+
+    }
+
+    @Override
     public void onSwitchedUserRole(JSONObject jsonObject) {
 
     }
@@ -645,6 +693,29 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
             jsonObject.put("videoMuted", true);
             jsonObject.put("name", "android 1");
         } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonObject;
+    }
+
+    private JSONObject getPlayerOptions(boolean enable, String textcolor,
+                                        int textsize, int textstyle, String text_background){
+        JSONObject jsonObject = new JSONObject();
+        try{
+
+            JSONObject overlay = new JSONObject();
+            overlay.put("enable",enable);
+
+            JSONObject properties = new JSONObject();
+            properties.put("textColor",textcolor);
+            properties.put("textSize",textsize);
+            properties.put("textStyle",textstyle);
+            properties.put("backgroundColor",text_background);
+
+            overlay.put("properties",properties);
+            jsonObject.put("overlay",overlay);
+
+        }catch (Exception e){
             e.printStackTrace();
         }
         return jsonObject;
@@ -853,6 +924,92 @@ public class ChatActivity extends AppCompatActivity implements EnxRoomObserver, 
     @Override
     public void onPlayerStats(JSONObject jsonObject) {
         Log.d("onPlayerStats",jsonObject.toString());
+        Iterator<String> iter = jsonObject.keys();
+        while (iter.hasNext()) {
+            String key = iter.next();
+
+            try {
+                if (key.equalsIgnoreCase(localStream.getId())) {
+                    String allstats = "Total:";
+                    JSONObject stats = ((JSONObject) (jsonObject.getJSONArray(localStream.getId())).get(0));
+                    if (stats.has("total")) {
+                        JSONObject senderStatsAudioJson = stats.getJSONObject("total");
+                        String totalbitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                        allstats = allstats + ": " + Integer.parseInt(totalbitRate)/1000 + " Kbps\n";
+                    }
+
+                    if (stats.has("audioStats")) {
+                        JSONObject senderStatsAudioJson = stats.getJSONObject("audioStats");
+                        String audiobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                        allstats = allstats + "Audio" + ": " + Integer.parseInt(audiobitRate)/1000 + " Kbps\n";
+                    }
+
+                    if (stats.has("videoStats")) {
+                        JSONObject senderStatsAudioJson = stats.getJSONObject("videoStats");
+                        String videobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                        allstats = allstats + "Video" + ": " + Integer.parseInt(videobitRate)/1000 + " Kbps";
+                    }
+
+                    localStatValue.setText(allstats);
+                }else {
+
+                    if(!key.equalsIgnoreCase(activetalkerStream.getId())){
+                        return;
+                    }
+                    for (int i = 0; i < jsonObject.getJSONArray(activetalkerStream.getId()).length(); i++){
+                        JSONObject statsObject = ((JSONObject) (jsonObject.getJSONArray(activetalkerStream.getId())).getJSONObject(i));
+                        String streamType = statsObject.getString("streamType");
+                        if (streamType.equalsIgnoreCase("selfPcStat")) {
+                            String allselfPcStat = "Total:";
+                            if (statsObject.has("total")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("total");
+                                String totalbitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allselfPcStat = allselfPcStat + ": " + Integer.parseInt(totalbitRate)/1000 + " Kbps\n";
+                            }
+
+                            if (statsObject.has("audioStats")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("audioStats");
+                                String audiobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allselfPcStat = allselfPcStat + "Audio" + ": " + Integer.parseInt(audiobitRate)/1000 + " Kbps\n";
+                            }
+
+                            if (statsObject.has("videoStats")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("videoStats");
+                                String videobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allselfPcStat = allselfPcStat + "Video" + ": " + Integer.parseInt(videobitRate)/1000 + " Kbps";
+                            }
+
+                            selfPeerConnectionValue.setText(allselfPcStat);
+                        }else {
+                            String allActStat = "Total:";
+                            if (statsObject.has("total")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("total");
+                                String totalbitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allActStat = allActStat + ": " + Integer.parseInt(totalbitRate)/1000 + " Kbps\n";
+                            }
+
+                            if (statsObject.has("audioStats")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("audioStats");
+                                String audiobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allActStat = allActStat + "Audio" + ": " + Integer.parseInt(audiobitRate)/1000 + " Kbps\n";
+                            }
+
+                            if (statsObject.has("videoStats")) {
+                                JSONObject senderStatsAudioJson = statsObject.getJSONObject("videoStats");
+                                String videobitRate = senderStatsAudioJson.getString("bitrateCalculated");
+                                allActStat = allActStat + "Video" + ": " + Integer.parseInt(videobitRate)/1000 + " Kbps";
+                            }
+
+                            activeTalkerStatValue.setText(allActStat);
+                        }
+
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     @Override

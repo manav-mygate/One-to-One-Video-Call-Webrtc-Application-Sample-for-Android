@@ -205,7 +205,7 @@ public class VideoConferenceActivity extends AppCompatActivity
         // received your chat data successfully sent to the other end
     }
 
-    @Override
+    /*@Override
     public void onReceivedChatDataAtRoom(JSONObject jsonObject) {
         // received when chat data received at room
         try {
@@ -215,6 +215,27 @@ public class VideoConferenceActivity extends AppCompatActivity
             e.printStackTrace();
         }
 
+    }*/
+
+
+    @Override
+    public void onMessageReceived(JSONObject jsonObject) {
+        try {
+            String textMessage = jsonObject.getString("message");
+            Toast.makeText(this,textMessage,Toast.LENGTH_SHORT).show();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onUserDataReceived(JSONObject jsonObject) {
+        try {
+            String textMessage = jsonObject.getString("message");
+            Toast.makeText(this,textMessage,Toast.LENGTH_SHORT).show();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override

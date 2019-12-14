@@ -39,7 +39,7 @@ dependencies {
     api('io.socket:socket.io-client:1.0.0') {
         exclude group: 'org.json', module: 'json'
     }
-    implementation(name: 'EnxRtcAndroid-release_1.5.1', ext: 'aar')
+    implementation(name: 'EnxRtcAndroid-release_1.5.1.5', ext: 'aar')
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'com.google.firebase:firebase-messaging:17.1.0'
 

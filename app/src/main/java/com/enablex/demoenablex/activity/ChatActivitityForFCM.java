@@ -292,8 +292,14 @@ public class ChatActivitityForFCM extends AppCompatActivity implements EnxRoomOb
         Log.d("Chat Activity", jsonObject.toString());
     }
 
+
+    public ChatActivitityForFCM() {
+        super();
+    }
+
+
     @Override
-    public void onReceivedChatDataAtRoom(JSONObject jsonObject) {
+    public void onMessageReceived(JSONObject jsonObject) {
         try {
 /*
             {"broadcast":true,"sender":"Android 2","senderId":"c7c7d7ea-154c-467e-8ee7-3194ad94d2f9","type":"user_data","message":"{\"message\":\"hjjj\",\"isSignal\":false,\"id\":21161140}","timestamp":1574332901910}
@@ -345,6 +351,11 @@ public class ChatActivitityForFCM extends AppCompatActivity implements EnxRoomOb
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+    }
+
+    @Override
+    public void onUserDataReceived(JSONObject jsonObject) {
 
     }
 

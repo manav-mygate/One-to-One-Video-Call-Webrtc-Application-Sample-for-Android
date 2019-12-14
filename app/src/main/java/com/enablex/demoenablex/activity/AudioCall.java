@@ -194,7 +194,7 @@ public class AudioCall extends AppCompatActivity
     }
 
     @Override
-    public void onReceivedChatDataAtRoom(JSONObject jsonObject) {
+    public void onMessageReceived(JSONObject jsonObject) {
         // received when chat data received at room
         try {
             String textMessage = jsonObject.getString("message");
@@ -202,6 +202,10 @@ public class AudioCall extends AppCompatActivity
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onUserDataReceived(JSONObject jsonObject) {
 
     }
 
